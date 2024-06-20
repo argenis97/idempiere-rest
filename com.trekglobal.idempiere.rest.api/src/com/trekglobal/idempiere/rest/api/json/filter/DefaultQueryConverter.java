@@ -85,10 +85,12 @@ public class DefaultQueryConverter implements IQueryConverter, IQueryConverterFa
 				sqlStatement = " " + literal.toUpperCase() + " ";
 			} else if (ODataUtils.NOT.equalsIgnoreCase(literal)) {
 				String nextOperator = literals.get(++i);
-
-				if (ODataUtils.isMethodCall(nextOperator)) {
+				
+				if (ODataUtils.isMultiSelectionMethod(nextOperator)) {
+					sqlStatement = convertMultiSelectionMethod(nextOperator, true);
+				} else if (ODataUtils.isMethodCall(nextOperator)) {
 					sqlStatement = convertMethodWithParamsLiteral(nextOperator, true);
-				} else {
+				}else {
 					throw new IDempiereRestException("Operator NOT is only compatible with certain functions. Not with " + nextOperator, Status.BAD_REQUEST);
 				}
 
@@ -99,6 +101,8 @@ public class DefaultQueryConverter implements IQueryConverter, IQueryConverterFa
 					convertedQuery.appendWhereClause("(");
 					convertLiterals(subliterals);
 					convertedQuery.appendWhereClause(")");
+				} else if (ODataUtils.isMultiSelectionMethod(literal) && ODataUtils.isMethodWithParameters(ODataUtils.getMethodCall(literal))) {
+					sqlStatement = convertMultiSelectionMethod(literal, false);
 				} else if (ODataUtils.isMethodCall(literal) && ODataUtils.isMethodWithParameters(ODataUtils.getMethodCall(literal))) {
 					sqlStatement = convertMethodWithParamsLiteral(literal, false);
 				} else {
@@ -111,6 +115,22 @@ public class DefaultQueryConverter implements IQueryConverter, IQueryConverterFa
 			}
 			convertedQuery.appendWhereClause(sqlStatement);
 		}
+	}
+	
+	/**
+	 * 
+	 * @author Argenis Rodríguez
+	 * @param literal
+	 * @param isNot
+	 * @return
+	 */
+	private String convertMultiSelectionMethod(String literal, boolean isNot) {
+		
+		String methodName = ODataUtils.getMethodCall(literal);
+		String columnName = ODataUtils.getFirstParameter(methodName, literal);
+		String value = ODataUtils.getSecondParameter(methodName, literal);
+		
+		return convertMultiSelectionMethod(methodName, columnName, value, isNot);
 	}
 	
 	private String convertMethodWithParamsLiteral(String literal, boolean isNot) {
@@ -203,6 +223,28 @@ public class DefaultQueryConverter implements IQueryConverter, IQueryConverterFa
 		}
 
 		return leftParameter + strOperator + rightParameter;
+	}
+	
+	private String convertMultiSelectionMethod(String methodCall, String columnName
+			, String value, boolean isNot) {
+		
+		String rightParameter = "?";
+		MColumn column = table.getColumn(columnName);
+		if (column == null || column.isSecure() || column.isEncrypted()) {
+			throw new IDempiereRestException("Invalid column for filter: " + columnName, Status.BAD_REQUEST);
+		}
+		
+		switch (methodCall) {
+		case ODataUtils.MULTIID:
+			convertedQuery.addParameter(column, value);
+			break;
+		}
+		
+		StringBuilder retVal = new StringBuilder(isNot ? "NOT (" : "(")
+				.append(rightParameter)
+				.append("=ANY((string_to_array(TRIM(").append(columnName).append("), ','))))");
+		
+		return retVal.toString();
 	}
 	
 	private String convertMethodCall(String methodCall, String columnName, String value, boolean isNot) {

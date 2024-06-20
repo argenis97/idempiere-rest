@@ -53,6 +53,9 @@ public class ODataUtils {
 	public static final String LOWER = "tolower";
 	public static final String UPPER = "toupper";
 	
+	//Add multselection operators by Argenis Rodríguez
+	public static final String MULTIID = "multiid";
+	
 	public static String getOperator(String operator) {
 		return OPERATORS.get(operator);
 	}
@@ -67,6 +70,16 @@ public class ODataUtils {
 				return true;
 			else 
 				throw new AdempiereException("Method call '" + methodName + "' not implemented");
+		}
+		return false;
+	}
+	
+	public static boolean isMultiSelectionMethod(String operator) {
+		if (!operator.trim().startsWith("(") && operator.trim().endsWith(")")) {
+			String methodName = getMethodCallName(operator);
+			if (SUPPORTED_PARAM_METHODS.contains(methodName)
+					&& MULTISELECTION_METHODS.contains(methodName))
+				return true;
 		}
 		return false;
 	}
@@ -129,11 +142,15 @@ public class ODataUtils {
 	private static final List<String> SUPPORTED_PARAM_METHODS = 
 			Collections.unmodifiableList(Arrays.asList(CONTAINS, 
 					STARTSWITH, 
-					ENDSWITH));
-	
+					ENDSWITH,
+					MULTIID));
+
 	private static final List<String> SUPPORTED_METHODS = 
 			Collections.unmodifiableList(Arrays.asList(LOWER, 
 					UPPER));
+
+	private static final List<String> MULTISELECTION_METHODS =
+			Collections.unmodifiableList(Arrays.asList(MULTIID));
 
 	private static final Map<String, String> OPERATORS = new HashMap<>() {
 		private static final long serialVersionUID = 8733161114590577691L;

@@ -20,70 +20,46 @@
 * MA 02110-1301, USA.                                                 *
 *                                                                     *
 * Contributors:                                                       *
-* - Trek Global Corporation                                           *
-* - Heng Sin Low                                                      *
+* - BX Service GmbH                                                   *
+* - Diego Ruiz                                                        *
 **********************************************************************/
-package com.trekglobal.idempiere.rest.api.oidc;
+package com.trekglobal.idempiere.rest.api.v1.resource;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import com.trekglobal.idempiere.rest.api.json.QueryOperators;
 
 /**
- * @author hengsin
+ * 
+ * @author Diego Ruiz
+ *
  */
-public class AuthenticatedUser {
+@Path("v1/statuslines")
+public interface StatusLineResource {
 
-	private int tenantId;
-	private int organizationId;
-	private int roleId;
-	private int userId;
-	private int sessionId;
-	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
 	/**
-	 * @param tenantId
-	 * @param organizationId
-	 * @param roleId
-	 * @param userId
-	 * @param sessionId 
+	 * Get available status lines
+	 * @param filter
+	 * @return JSON array of status lines
 	 */
-	public AuthenticatedUser(int tenantId, int organizationId, int roleId, int userId, int sessionId) {
-		this.tenantId = tenantId;
-		this.organizationId = organizationId;
-		this.roleId = roleId;
-		this.userId = userId;
-		this.sessionId = sessionId;
-	}
+	public Response getStatusLines(@QueryParam(QueryOperators.FILTER) String filter, @QueryParam(QueryOperators.INCLUDE_MSG) boolean includeMsg);
 
+	@Path("{statusLineId}")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
 	/**
-	 * @return AD_Client_ID
+	 * Get the resulting message of the status line by id
+	 * @param statusLineId
+	 * @return JSON representation of message - can be HTML
 	 */
-	public int getTenantId() {
-		return tenantId;
-	}
-
-	/**
-	 * @return AD_Org_ID
-	 */
-	public int getOrganizationId() {
-		return organizationId;
-	}
-
-	/**
-	 * @return AD_Role_ID
-	 */
-	public int getRoleId() {
-		return roleId;
-	}
-
-	/**
-	 * @return AD_User_ID
-	 */
-	public int getUserId() {
-		return userId;
-	}
-		
-	/**
-	 * @return AD_Session_ID
-	 */
-	public int getsessionId() {
-		return sessionId;
-	}
+	public Response getStatusLineValue(@PathParam("statusLineId") String id);
 
 }

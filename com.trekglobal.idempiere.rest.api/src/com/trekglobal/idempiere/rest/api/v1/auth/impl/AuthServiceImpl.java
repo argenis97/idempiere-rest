@@ -38,6 +38,7 @@ import javax.xml.bind.DatatypeConverter;
 import org.adempiere.util.LogAuthFailure;
 import org.compiere.model.I_AD_Preference;
 import org.compiere.model.MClient;
+import org.compiere.model.MClientInfo;
 import org.compiere.model.MOrg;
 import org.compiere.model.MPreference;
 import org.compiere.model.MRole;
@@ -63,6 +64,7 @@ import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.trekglobal.idempiere.rest.api.json.RestUtils;
 import com.trekglobal.idempiere.rest.api.model.MRefreshToken;
 import com.trekglobal.idempiere.rest.api.util.ErrorBuilder;
 import com.trekglobal.idempiere.rest.api.v1.auth.AuthService;
@@ -258,6 +260,7 @@ public class AuthServiceImpl implements AuthService {
 			MRole role = MRole.get(Env.getCtx(), roleId);
 			Env.setContext(Env.getCtx(), Env.AD_ROLE_ID, role.getAD_Role_ID());
 			MOrg org = MOrg.get(organizationId);
+			Env.setPredefinedVariables(Env.getCtx(), -1, MRole.getDefault().getPredefinedContextVariables());
 			KeyNamePair knp = new KeyNamePair(org.getAD_Org_ID(), org.getName());
 			KeyNamePair[] warehouses = login.getWarehouses(knp);
 			JsonArray array = new JsonArray();
@@ -361,6 +364,11 @@ public class AuthServiceImpl implements AuthService {
 			session.saveEx();
 		}
 		builder.withClaim(LoginClaims.AD_Session_ID.name(), session.getAD_Session_ID());
+		MRole role = MRole.getDefault();
+		int menuTreeId = role.getAD_Tree_Menu_ID();
+		if (menuTreeId <= 0)
+			menuTreeId = MClientInfo.get().getAD_Tree_Menu_ID();
+		responseNode.addProperty("menuTreeId", menuTreeId);
 
 		Timestamp expiresAt = TokenUtils.getTokenExpiresAt();
 		builder.withIssuer(TokenUtils.getTokenIssuer()).withExpiresAt(expiresAt).withKeyId(TokenUtils.getTokenKeyId());
@@ -661,6 +669,7 @@ public class AuthServiceImpl implements AuthService {
 		Env.setContext(Env.getCtx(), Env.AD_SESSION_ID, sessionId);
 		MSession session = new MSession(Env.getCtx(), sessionId, null);
 		session.logout();
+		RestUtils.removeSavedCtx(sessionId);
 
 		MRefreshToken.deleteToken(token);
 

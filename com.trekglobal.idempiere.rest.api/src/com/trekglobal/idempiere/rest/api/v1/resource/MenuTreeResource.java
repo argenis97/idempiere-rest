@@ -20,70 +20,34 @@
 * MA 02110-1301, USA.                                                 *
 *                                                                     *
 * Contributors:                                                       *
-* - Trek Global Corporation                                           *
-* - Heng Sin Low                                                      *
+* - BX Service GmbH                                                   *
+* - Carlos Ruiz                                                       *
 **********************************************************************/
-package com.trekglobal.idempiere.rest.api.oidc;
+package com.trekglobal.idempiere.rest.api.v1.resource;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 /**
- * @author hengsin
+ * 
+ * @author Carlos Ruiz
+ *
  */
-public class AuthenticatedUser {
+@Path("v1/menutree")
+public interface MenuTreeResource {
 
-	private int tenantId;
-	private int organizationId;
-	private int roleId;
-	private int userId;
-	private int sessionId;
-	
+	@Path("{menuTreeId}")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
 	/**
-	 * @param tenantId
-	 * @param organizationId
-	 * @param roleId
-	 * @param userId
-	 * @param sessionId 
+	 * Get the menu tree by id
+	 * @param menuTreeId
+	 * @return JSON representation of menu with its children
 	 */
-	public AuthenticatedUser(int tenantId, int organizationId, int roleId, int userId, int sessionId) {
-		this.tenantId = tenantId;
-		this.organizationId = organizationId;
-		this.roleId = roleId;
-		this.userId = userId;
-		this.sessionId = sessionId;
-	}
-
-	/**
-	 * @return AD_Client_ID
-	 */
-	public int getTenantId() {
-		return tenantId;
-	}
-
-	/**
-	 * @return AD_Org_ID
-	 */
-	public int getOrganizationId() {
-		return organizationId;
-	}
-
-	/**
-	 * @return AD_Role_ID
-	 */
-	public int getRoleId() {
-		return roleId;
-	}
-
-	/**
-	 * @return AD_User_ID
-	 */
-	public int getUserId() {
-		return userId;
-	}
-		
-	/**
-	 * @return AD_Session_ID
-	 */
-	public int getsessionId() {
-		return sessionId;
-	}
+	public Response getMenu(@PathParam("menuTreeId") String id);
 
 }

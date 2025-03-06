@@ -187,7 +187,8 @@
 							"pm.environment.set(\"authToken\", jsonData.token);",
 							"pm.environment.set(\"refreshToken\", jsonData.refresh_token);"
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -207,7 +208,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"refresh_token\": \"{{refreshToken}}\"\n}"
+					"raw": "{\n    \"refresh_token\": \"{{refreshToken}}\",\n    \"clientId\": {{clientId}},\n    \"userId\": 101\n}"
 				},
 				"url": {
 					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/auth/refresh",
@@ -2187,7 +2188,7 @@
 			"response": []
 		},
 		{
-			"name": "api/v1/files/{file name}?length={file size}",
+			"name": "api/v1/files?fileName={file name}&length={file size}",
 			"request": {
 				"method": "GET",
 				"header": [
@@ -2208,7 +2209,7 @@
 					}
 				],
 				"url": {
-					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/files/{{processFileName}}?length={{processFileLength}}&nodeId={{processNodeId}}",
+					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/files?fileName={{logFileName}}&length={{logFileLength}}",
 					"protocol": "{{protocol}}",
 					"host": [
 						"{{host}}"
@@ -2217,17 +2218,16 @@
 					"path": [
 						"api",
 						"v1",
-						"files",
-						"{{processFileName}}"
+						"files"
 					],
 					"query": [
 						{
-							"key": "length",
-							"value": "{{processFileLength}}"
+							"key": "fileName",
+							"value": "{{logFileName}}"
 						},
 						{
-							"key": "nodeId",
-							"value": "{{processNodeId}}"
+							"key": "length",
+							"value": "{{logFileLength}}"
 						}
 					]
 				},
@@ -2781,7 +2781,7 @@
 			"response": []
 		},
 		{
-			"name": "api/v1/nodes/{id}/logs/{fileName}",
+			"name": "api/v1/nodes/{id}/logs/file",
 			"request": {
 				"method": "GET",
 				"header": [
@@ -2803,7 +2803,7 @@
 					}
 				],
 				"url": {
-					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/nodes/{{nodeId}}/logs/{{logFileName}}",
+					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/nodes/{{nodeId}}/logs/file?fileName={{logFileName}}",
 					"protocol": "{{protocol}}",
 					"host": [
 						"{{host}}"
@@ -2815,7 +2815,13 @@
 						"nodes",
 						"{{nodeId}}",
 						"logs",
-						"{{logFileName}}"
+						"file"
+					],
+					"query": [
+						{
+							"key": "fileName",
+							"value": "{{logFileName}}"
+						}
 					]
 				}
 			},
@@ -4147,7 +4153,7 @@
 			"response": []
 		},
 		{
-			"name": "api/v1/charts/50002",
+			"name": "api/v1/charts/{id}",
 			"request": {
 				"method": "GET",
 				"header": [
@@ -4196,6 +4202,91 @@
 			"response": []
 		},
 		{
+			"name": "api/v1/charts/{id}/data",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/charts/50002/data",
+					"protocol": "{{protocol}}",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"v1",
+						"charts",
+						"50002",
+						"data"
+					]
+				},
+				"description": "Get data from chart 50002"
+			},
+			"response": []
+		},
+				{
+			"name": "api/v1/charts/data?$filter={where clause}",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/charts/data?$filter=AD_Chart_ID eq 50000 OR AD_Chart_ID eq 50001",
+					"protocol": "{{protocol}}",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"v1",
+						"charts",
+						"data"
+					],
+					"query": [
+						{
+							"key": "$filter",
+							"value": "AD_Chart_ID eq 50000 OR AD_Chart_ID eq 50001"
+						}
+					]
+				},
+				"description": "Get data from charts filtered by id"
+			},
+			"response": []
+		},
+		{
 			"name": "api/v1/menutree/{id}",
 			"request": {
 				"method": "GET",
@@ -4231,6 +4322,51 @@
 					]
 				},
 				"description": "Get menu tree for an Id."
+			},
+			"response": []
+		},
+		{
+			"name": "api/v1/models/{tableName}?locale={locale}",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"type": "text",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"type": "text",
+						"value": "Bearer {{authToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{protocol}}://{{host}}:{{port}}/api/v1/models/{{tableName}}?locale={{locale}}",
+					"protocol": "{{protocol}}",
+					"host": [
+						"{{host}}"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"v1",
+						"models",
+						"{{tableName}}"
+					],
+					"query": [
+						{
+							"key": "locale",
+							"value": "{{locale}}"
+						}
+					]
+				},
+				"description": "Get models with locale query parameter."
 			},
 			"response": []
 		}

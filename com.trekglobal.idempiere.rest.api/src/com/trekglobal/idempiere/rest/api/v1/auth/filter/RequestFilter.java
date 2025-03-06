@@ -29,7 +29,9 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Properties;
 
+import javax.annotation.Priority;
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.HttpHeaders;
@@ -52,10 +54,12 @@ import com.trekglobal.idempiere.rest.api.json.RestUtils;
 import com.trekglobal.idempiere.rest.api.model.MAuthToken;
 import com.trekglobal.idempiere.rest.api.model.MOIDCService;
 import com.trekglobal.idempiere.rest.api.model.MRefreshToken;
+import com.trekglobal.idempiere.rest.api.model.MRestResourceAccess;
 import com.trekglobal.idempiere.rest.api.v1.jwt.LoginClaims;
 import com.trekglobal.idempiere.rest.api.v1.jwt.TokenUtils;
 
 @Provider
+@Priority(Priorities.AUTHORIZATION)
 /**
  * Validate JWT token and set environment context(client,org,user,role and warehouse)
  * @author hengsin
@@ -95,11 +99,25 @@ public class RequestFilter implements ContainerRequestFilter {
 		// consume JWT i.e. execute signature validation
 		if (authHeaderVal != null && authHeaderVal.startsWith("Bearer")) {
 			try {
-				validate(authHeaderVal.split(" ")[1], requestContext);
+				//validate Bearer token exists
+				String[] authHeaderValues = authHeaderVal.split(" ");
+				if (authHeaderValues.length < 2) {
+					requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+					return;
+				}
+				validate(authHeaderValues[1], requestContext);
 				if (Util.isEmpty(Env.getContext(Env.getCtx(), Env.AD_USER_ID)) ||
 					Util.isEmpty(Env.getContext(Env.getCtx(), Env.AD_ROLE_ID))) {
 					if (!requestContext.getUriInfo().getPath().startsWith("v1/auth/")) {
 						requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+					}
+				}
+				//check resource access by role (if enable)
+				if (MRestResourceAccess.isResourceAccessByRole()) {
+					if (!requestContext.getUriInfo().getPath().startsWith("v1/auth/")) {
+						if (!MRestResourceAccess.hasAccess(requestContext.getUriInfo().getPath(true), requestContext.getMethod())) {
+							requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+						}
 					}
 				}
 			} catch (JWTVerificationException ex) {
@@ -118,6 +136,9 @@ public class RequestFilter implements ContainerRequestFilter {
 		
 		if(MAuthToken.isBlocked(token)) {
 			throw new JWTVerificationException("Token is blocked");
+		}
+		if(MRefreshToken.isRevoked(token)) {
+			throw new JWTVerificationException("Token is revoked");
 		}
 		
 		MOIDCService service = MOIDCService.findMatchingOIDCService(token);
@@ -180,7 +201,7 @@ public class RequestFilter implements ContainerRequestFilter {
 				// is possible that the session was finished in a reboot instead of a logout
 				// if there is a REST_AuthToken or a REST_RefreshToken, then the user has not logged out
 				MAuthToken authToken = MAuthToken.get(Env.getCtx(), token);
-				if (authToken != null || MRefreshToken.exists(token)) {
+				if (authToken != null  || MRefreshToken.existsAuthToken(token)) {
 					DB.executeUpdateEx("UPDATE AD_Session SET Processed='N', UpdatedBy=CreatedBy, Updated=getDate() WHERE AD_Session_ID=?", new Object[] {AD_Session_ID}, null);
 					session.load(session.get_TrxName());
 				} else {

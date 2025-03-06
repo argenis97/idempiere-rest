@@ -27,6 +27,9 @@ package com.trekglobal.idempiere.rest.api.v1.resource.impl;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.file.Files;
+import java.util.Base64;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.imageio.ImageIO;
@@ -34,13 +37,18 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.compiere.model.MChart;
+import org.compiere.model.Query;
 import org.compiere.tools.FileUtil;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.trekglobal.idempiere.rest.api.json.IDempiereRestException;
+import com.trekglobal.idempiere.rest.api.json.filter.ConvertedQuery;
+import com.trekglobal.idempiere.rest.api.json.filter.IQueryConverter;
 import com.trekglobal.idempiere.rest.api.util.ErrorBuilder;
 import com.trekglobal.idempiere.rest.api.v1.resource.ChartResource;
 import com.trekglobal.idempiere.rest.api.v1.resource.file.FileStreamingOutput;
@@ -58,7 +66,7 @@ public class ChartResourceImpl implements ChartResource {
 	}
 
 	@Override
-	public Response getChartImage(String id, int width, int height) {
+	public Response getChartImage(String id, int width, int height, String asJson) {
 		try {
 			boolean isUUID = Util.isUUID(id);
 			int chartId = isUUID ? getChartID(id) : Integer.valueOf(id);
@@ -69,9 +77,17 @@ public class ChartResourceImpl implements ChartResource {
 				img = mc.getChartImage(width, height);
 			if (img != null) {
 				File file = FileUtil.createTempFile("chart" + chartId, ".png");
-		        ImageIO.write(img, "png", file);
-				FileStreamingOutput fso = new FileStreamingOutput(file);
-				return Response.ok(fso).build();
+				ImageIO.write(img, "png", file);
+				if (asJson == null) {
+					FileStreamingOutput fso = new FileStreamingOutput(file);
+					return Response.ok(fso).header("Content-Type", "image/png").build();
+				} else {
+					JsonObject json = new JsonObject();
+					byte[] binaryData = Files.readAllBytes(file.toPath());
+					String data = Base64.getEncoder().encodeToString(binaryData);
+					json.addProperty("data", data);
+					return Response.ok(json.toString()).build();
+				}
 			}
 			return Response.status(Status.NO_CONTENT).build();
 		} catch (Exception ex) {
@@ -93,6 +109,55 @@ public class ChartResourceImpl implements ChartResource {
 	private int getChartID(String uuid) {
 		String sql = "SELECT AD_Chart_ID FROM AD_Chart WHERE AD_Chart_UU = ?";
 		return DB.getSQLValue(null, sql, uuid);
+	}
+
+	@Override
+	public Response getChartData(String id) {
+		boolean isUUID = Util.isUUID(id);
+		int chartId = isUUID ? getChartID(id) : Integer.valueOf(id);
+		MChart mc = new MChart(Env.getCtx(), chartId, null);
+		return Response.ok(mc.getData().toString()).build();
+	}
+
+	@Override
+	public Response getMultipleChartData(String filter) {
+		IQueryConverter converter = IQueryConverter.getQueryConverter("DEFAULT");
+		try {
+			ConvertedQuery convertedStatement = converter.convertStatement(MChart.Table_Name, filter);
+			if (log.isLoggable(Level.INFO)) 
+				log.info("Where Clause: " + convertedStatement.getWhereClause());
+
+			JsonArray chartsArray = new JsonArray();
+			Query query = new Query(Env.getCtx(), MChart.Table_Name, convertedStatement.getWhereClause(), null);
+			query.setApplyAccessFilter(true)
+			.setOnlyActiveRecords(true)
+			.setOrderBy("Name");
+			query.setParameters(convertedStatement.getParameters());
+
+			List<MChart> charts = query.list();
+			for(MChart chart : charts) {
+				JsonObject jsonChart = chart.getData();
+				jsonChart.addProperty("id", chart.getAD_Chart_ID());
+				chartsArray.add(jsonChart);
+			}
+
+			JsonObject json = new JsonObject();
+			json.add("charts", chartsArray);
+			return Response.ok(json.toString()).build();
+		} catch (Exception ex) {
+			Status status = Status.INTERNAL_SERVER_ERROR;
+			if (ex instanceof IDempiereRestException)
+				status = ((IDempiereRestException) ex).getErrorResponseStatus();
+
+			log.log(Level.SEVERE, ex.getMessage(), ex);
+			return Response.status(status)
+					.entity(new ErrorBuilder().status(status)
+							.title("GET Error")
+							.append("Get charts with exception: ")
+							.append(ex.getMessage())
+							.build().toString())
+					.build();
+		}
 	}
 
 }

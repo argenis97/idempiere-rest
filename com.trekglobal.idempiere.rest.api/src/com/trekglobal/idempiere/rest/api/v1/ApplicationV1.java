@@ -30,9 +30,14 @@ import java.util.Set;
 
 import javax.ws.rs.core.Application;
 
+import org.adempiere.base.IServiceReferenceHolder;
+import org.adempiere.base.IServicesHolder;
+import org.adempiere.base.Service;
 import org.glassfish.jersey.jackson.JacksonFeature;
 
+import com.trekglobal.idempiere.rest.api.ResourceExtension;
 import com.trekglobal.idempiere.rest.api.v1.auth.filter.RequestFilter;
+import com.trekglobal.idempiere.rest.api.v1.auth.filter.RequestSetLanguageFilter;
 import com.trekglobal.idempiere.rest.api.v1.auth.filter.ResponseFilter;
 import com.trekglobal.idempiere.rest.api.v1.auth.impl.AuthServiceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.CacheResourceImpl;
@@ -47,6 +52,7 @@ import com.trekglobal.idempiere.rest.api.v1.resource.impl.ProcessResourceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.ReferenceResourceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.ServerResourceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.StatusLineResourceImpl;
+import com.trekglobal.idempiere.rest.api.v1.resource.impl.ViewResourceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.WindowResourceImpl;
 import com.trekglobal.idempiere.rest.api.v1.resource.impl.WorkflowResourceImpl;
 
@@ -68,6 +74,7 @@ public class ApplicationV1 extends Application {
         
         classes.add(AuthServiceImpl.class);
         classes.add(RequestFilter.class);
+        classes.add(RequestSetLanguageFilter.class);
         classes.add(ResponseFilter.class);
         classes.add(JacksonFeature.class);
         classes.add(ModelResourceImpl.class);
@@ -84,6 +91,15 @@ public class ApplicationV1 extends Application {
         classes.add(StatusLineResourceImpl.class);
         classes.add(ChartResourceImpl.class);
         classes.add(MenuTreeResourceImpl.class);
+        classes.add(ViewResourceImpl.class);
+        
+        IServicesHolder<ResourceExtension> list = Service.locator().list(ResourceExtension.class);
+        for (IServiceReferenceHolder<ResourceExtension> holder : list.getServiceReferences()) {
+        	ResourceExtension service = holder.getService();
+        	if (service != null) {
+        		classes.addAll(service.getResourceClasses());
+        	}
+        }
         
         return classes;
     }	

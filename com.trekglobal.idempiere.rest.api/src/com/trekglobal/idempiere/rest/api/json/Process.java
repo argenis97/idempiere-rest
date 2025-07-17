@@ -68,6 +68,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
+import com.ingeint.rest.api.util.JSONUtil;
 import com.trekglobal.idempiere.rest.api.util.ClusterUtil;
 
 /**
@@ -247,6 +248,7 @@ public class Process {
 		processInfoJson.addProperty("AD_PInstance_ID", processInfo.getAD_PInstance_ID());
 		processInfoJson.addProperty("process", processSlug);
 		processInfoJson.addProperty("summary", processInfo.getSummary());
+		processInfoJson.add("jsonSummary", JSONUtil.toJSON(processInfo.getSummary()));
 		
 		String data = processInfo.getJsonData();
 		if (data != null && !data.isEmpty()) {
